@@ -86,10 +86,40 @@ export default function HomeScreen() {
       </ThemedView>
 
       <ThemedView style={styles.stepContainer}>
+        <Link href="/purchases" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ Purchases
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/sales" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ sales
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+
+      <ThemedView style={styles.stepContainer}>
         <Link href="/payments" asChild>
           <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
             <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
               ➕ payments
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/suppliers" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ suppliers
             </ThemedText>
           </TouchableOpacity>
         </Link>

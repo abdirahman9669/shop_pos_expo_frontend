@@ -109,13 +109,13 @@ export default function PaymentsIndex() {
 /*
   const openSupplier = (id: string) =>
     router.push({ pathname: '/supplier/[id]' as const, params: { id } });
-
+*/
   const openSale = (id: string) =>
     router.push({ pathname: '/sales/[id]' as const, params: { id } });
 
   const openPurchase = (id: string) =>
     router.push({ pathname: '/purchases/[id]' as const, params: { id } });
-*/
+
   const createPayment = () =>
     router.push({ pathname: '/payments/new' as const });
 
@@ -161,6 +161,9 @@ export default function PaymentsIndex() {
               <Text style={s.chipText}>Supplier</Text>
             </TouchableOpacity>
           ) : null}
+
+    */
+}
           {item.sale_id ? (
             <TouchableOpacity style={s.chip} onPress={() => openSale(item.sale_id!)}>
               <Text style={s.chipText}>Sale</Text>
@@ -171,8 +174,7 @@ export default function PaymentsIndex() {
               <Text style={s.chipText}>Purchase</Text>
             </TouchableOpacity>
           ) : null}
-    */
-}
+
         </View>
       </TouchableOpacity>
     );
