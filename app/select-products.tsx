@@ -4,15 +4,13 @@ import {
   ActivityIndicator, FlatList, Modal, Alert, ScrollView
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { API_BASE } from '@/src/config';
+import { API_BASE, TOKEN } from '@/src/config';
 
 // --- endpoints ---
 const PRODUCTS_URL = `${API_BASE}/api/products`;
 const PRODUCTS_BY_BAR_URL = `${API_BASE}/api/products/byBar`;
 
 // Dev only — move to secure storage later
-const TOKEN =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzMzMzMzMzMy0zMzMzLTQzMzMtODMzMy0zMzMzMzMzMzMzMzMiLCJyb2xlIjoib3duZXIiLCJzaG9wX2lkIjoiMTExMTExMTEtMTExMS00MTExLTgxMTEtMTExMTExMTExMTExIiwidXNlcm5hbWUiOiJvd25lciIsImlhdCI6MTc1ODUzODc5NCwiZXhwIjoxNzU5MTQzNTk0fQ.adMEzVETyptj6qJ-2ac0T7XAWgr1ugKpTRwgEoNoXgA';
 
 type Product = {
   id: string;

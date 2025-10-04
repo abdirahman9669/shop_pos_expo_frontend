@@ -125,6 +125,81 @@ export default function HomeScreen() {
         </Link>
       </ThemedView>
 
+
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/journals" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ journals
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+
+
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/stores" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ stores
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+
+
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/exchange-rates" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ exchange-rates
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/returns/new" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ returns
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+
+
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/cash-sessions" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ cash-sessions
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/barcodes/lookup" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ barcodes lookup
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+
+
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/exchange" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ exchange
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 1: Try it</ThemedText>
         <ThemedText>

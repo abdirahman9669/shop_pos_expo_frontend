@@ -12,10 +12,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
-import { API_BASE } from '@/src/config';
+import { API_BASE, TOKEN } from '@/src/config';
 
 /** ====== TEMP AUTH (move to secure storage later) ====== */
-const TOKEN = 'REDACTED';
+
 const AUTH = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
 
 /** ====== Types ====== */
