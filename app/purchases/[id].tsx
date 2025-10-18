@@ -58,6 +58,7 @@ type PurchaseDetail = {
   purchase: {
     id: string;
     shop_id: string;
+    purchase_number?: string | null;
     status: 'RECEIVED' | 'VOIDED' | string;
     total_cost_usd: number | string;
     created_by: string;
@@ -157,7 +158,8 @@ export default function PurchaseDetailScreen() {
               <View style={s.kv}><Text style={s.k}>Total (USD)</Text><Text style={s.v}>{money(data.payments.total_cost_usd)}</Text></View>
               <View style={s.kv}><Text style={s.k}>Paid (USD)</Text><Text style={s.v}>{money(data.payments.paid_usd)}</Text></View>
               <View style={s.kv}><Text style={s.k}>Payable (USD)</Text><Text style={s.v}>{money(data.payments.payable_usd_remaining)}</Text></View>
-
+             <View style={s.kv}><Text style={s.k}>purchase number</Text><Text style={s.v}>{data.purchase.purchase_number || '-'}</Text></View>
+            
               <View style={s.actions}>
                 <TouchableOpacity style={s.btn} onPress={load}>
                   <Text style={s.btnText}>Reload</Text>

@@ -46,15 +46,23 @@ export default function HomeScreen() {
       </ThemedView>
 
       <ThemedView style={styles.stepContainer}>
-        <Link href="/sale-new" asChild>
+        <Link href="/sales/new" asChild>
           <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
             <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ new sale
+              ➕ new salee
             </ThemedText>
           </TouchableOpacity>
         </Link>
       </ThemedView>
-
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/sales/screens/NewSale" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ new sale small
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
       <ThemedView style={styles.stepContainer}>
         <Link href="/purchase-new" asChild>
           <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
@@ -257,4 +265,10 @@ const styles = StyleSheet.create({
 /*
 npx expo start -c
 
+
+SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/th3rdwave/react-native-safe-area-context
+ ERROR  Text strings must be rendered within a <Text> component. 
+
+ solution 
+import { SafeAreaView } from 'react-native-safe-area-context';
 */

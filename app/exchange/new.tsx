@@ -93,7 +93,19 @@ function AccountPicker({
   );
 }
 
+// Round SOS to 1,000s (same rule you use elsewhere)
+const roundSOS1000 = (v: number, mode: 'up'|'down'|'nearest') => {
+  const k = 1000;
+  if (mode === 'up')   return Math.ceil((v || 0) / k) * k;
+  if (mode === 'down') return Math.floor((v || 0) / k) * k;
+  // nearest (auto)
+  return Math.round((v || 0) / k) * k;
+};
+
+
+
 export default function NewExchange() {
+  const [exRoundMode, setExRoundMode] = useState<'auto'|'up'|'down'>('auto');
   const [dir, setDir] = useState<Dir>('USD2SOS');
   const [amountStr, setAmountStr] = useState('1');
   const [counterRateStr, setCounterRateStr] = useState('');
@@ -155,6 +167,9 @@ export default function NewExchange() {
 
   useEffect(() => { loadRates(); }, [loadRates]);
   useEffect(() => { loadAccounts(); }, [loadAccounts]);
+useEffect(() => {
+  setExRoundMode('auto');
+}, [dir, amountStr, counterRateStr, acctRate]);
 
   // ------- default accounts per direction -------
   useEffect(() => {
@@ -234,6 +249,37 @@ export default function NewExchange() {
     };
   }, [dir, amount, counterRate, acctRate]);
 
+  //////////////////////rounding\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+  // ----- USD→SOS rounding model for the preview & payload -----
+const exRawSOS = dir === 'USD2SOS' ? (amount > 0 && counterRate > 0 ? amount * counterRate : 0) : 0;
+const exRawSOSInt = Math.round(exRawSOS);
+
+const exDownSOS = roundSOS1000(exRawSOSInt, 'down');
+const exUpSOS   = roundSOS1000(exRawSOSInt, 'up');
+const exAutoSOS = roundSOS1000(exRawSOSInt, 'nearest');
+
+const exChosenSOS =
+  exRoundMode === 'auto' ? exAutoSOS :
+  exRoundMode === 'up'   ? exUpSOS   :
+                           exDownSOS;
+
+const exDiffSOS = exChosenSOS - exRawSOSInt;            // >0 gain, <0 loss
+const exDirection = exDiffSOS > 0 ? 'LOSS' : (exDiffSOS < 0 ? 'GAIN' : 'NONE');
+
+// handy toggler (tap the chip)
+const onToggleExRounding = useCallback(() => {
+  setExRoundMode(prev => {
+    if (prev === 'auto') {
+      // if nearest equals down (not up), flip to up first (same behavior as Sale)
+      const nearestIsDown = exAutoSOS === exDownSOS && exAutoSOS !== exUpSOS;
+      return nearestIsDown ? 'up' : 'down';
+    }
+    return prev === 'up' ? 'down' : 'up';
+  });
+}, [exAutoSOS, exDownSOS, exUpSOS]);
+
+  ////////////////////////////////////////////////////
+
   // ------- submit to API (send ALL preview lines) -------
   const submit = useCallback(async () => {
     try {
@@ -280,24 +326,39 @@ export default function NewExchange() {
         fx_gain_usd: preview_lines.fx_gain_usd,
         fx_loss_usd: preview_lines.fx_loss_usd,
       };
-
+      // Add the same rounding_meta contract as Sale does (only for USD→SOS)
+        if (dir === 'USD2SOS') {
+          body.rounding_meta = {
+            mode: exRoundMode,
+            rate_used: counterRate,
+            base_needed_native: exRawSOSInt,     // raw SOS from amount * counterRate
+            chosen_target_native: exChosenSOS,   // cashier-chosen rounded SOS
+            diff_native: Math.abs(exDiffSOS),
+            direction: exDirection,              // 'GAIN' | 'LOSS' | 'NONE'
+          };
+        }
       const r = await fetch(`${API_BASE}/api/exchange`, {
         method: 'POST', headers: AUTH, body: JSON.stringify(body),
       });
       const j = await r.json();
       if (!r.ok || j?.ok === false) throw new Error(j?.error || `HTTP ${r.status}`);
 
-      Alert.alert(
-        '✅ Exchange recorded',
-        `CP–SR: ${preview.cpCur === 'USD' ? fmt4(preview.cpAmt) : fmtSOS(preview.cpAmt)} ${preview.cpCur}\n` +
-        `CR–SP: ${preview.crCur === 'USD' ? fmt4(preview.crAmt) : fmtSOS(preview.crAmt)} ${preview.crCur}\n` +
-        `IAR:   ${preview.iarCur === 'USD' ? fmt4(preview.iarAmt) : fmtSOS(preview.iarAmt)} ${preview.iarCur}\n` +
-        `FX gain: ${fmt4(preview.fxGainUsd)}  •  FX loss: ${fmt4(preview.fxLossUsd)}`
-      );
+        Alert.alert(
+          '✅ Exchange recorded',
+          (dir === 'USD2SOS'
+            ? `CP–SR: ${fmt4(preview.cpAmt)} USD\n` +
+              `CR–SP: ${fmtSOS(exChosenSOS)} SOS (${exRoundMode})\n` +   // 👈 rounded value
+              `IAR:   ${fmtSOS(Math.round(preview.iarAmt))} SOS\n`
+            : `CP–SR: ${fmtSOS(preview.cpAmt)} SOS\n` +
+              `CR–SP: ${fmt4(preview.crAmt)} USD\n` +
+              `IAR:   ${fmt4(preview.iarAmt)} USD\n`
+          ) +
+          `FX gain: ${fmt4(preview.fxGainUsd)}  •  FX loss: ${fmt4(preview.fxLossUsd)}`
+        );
     } catch (e: any) {
       Alert.alert('Exchange failed', e?.message || 'Unknown error');
     }
-  }, [dir, amount, counterRate, acctRate, fromAcc, toAcc, preview]);
+  }, [dir, amount, counterRate, acctRate, fromAcc, toAcc, preview, exRoundMode, exRawSOSInt, exChosenSOS, exDiffSOS, exDirection]);
 
   // ------- helpers -------
   const renderMoney = (amt: number, cur: Cur) =>
@@ -386,11 +447,42 @@ export default function NewExchange() {
                     </Text>
                   </View>
 
+                  {/* Customer receives — Shop pays */}
                   <View style={s.kv}>
                     <Text style={s.k}>Customer receives — Shop pays</Text>
-                    <Text style={s.v}>
-                      {renderMoney(preview.crAmt, preview.crCur)} {preview.crCur}
-                    </Text>
+                    {dir === 'USD2SOS' ? (
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <TouchableOpacity
+                          onPress={onToggleExRounding}
+                          style={{ paddingVertical: 2, paddingHorizontal: 8, borderRadius: 8, backgroundColor: '#f1f1f1' }}
+                        >
+                          <Text style={{ fontWeight: '800' }}>
+                            {fmtSOS(exChosenSOS)} SOS{' '}
+                            <Text style={{ color: '#666' }}>
+                              ({exRoundMode === 'auto' ? 'auto' : exRoundMode})
+                            </Text>
+                          </Text>
+                        </TouchableOpacity>
+                            <Text style={{ color: '#666', marginTop: 4 }}>
+                              raw {fmtSOS(exRawSOSInt)}
+                              {exDiffSOS !== 0 && (
+                                <Text
+                                  style={{
+                                    color: exDiffSOS > 0 ? '#c1121f' : '#0a7d36', // red = loss, green = gain
+                                    fontWeight: '700',
+                                  }}
+                                >
+                                  {'  '}
+                                  {exDiffSOS > 0 ? '+' : ''}{fmtSOS(Math.abs(exDiffSOS))}{' '}
+                                  {exDiffSOS > 0 ? 'R loss' : 'R gain'}
+                                </Text>
+                              )}
+                            </Text>
+                      </View>
+                    ) : (
+                      // SOS→USD: no cashier rounding, show plain USD
+                      <Text style={s.v}>{fmt4(preview.crAmt)} USD</Text>
+                    )}
                   </View>
 
                   <View style={s.kv}>

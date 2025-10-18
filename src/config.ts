@@ -15,7 +15,7 @@ export const API_BASE = guessBase();
 
 // 👇 Put your JWT token here
 export const TOKEN =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzMzMzMzMzMy0zMzMzLTQzMzMtODMzMy0zMzMzMzMzMzMzMzMiLCJyb2xlIjoib3duZXIiLCJzaG9wX2lkIjoiMTExMTExMTEtMTExMS00MTExLTgxMTEtMTExMTExMTExMTExIiwidXNlcm5hbWUiOiJvd25lciIsImlhdCI6MTc1OTM2NTQwMSwiZXhwIjoxNzU5OTcwMjAxfQ.osrVTNhovX8cBJkOQOzPQ_8ZQj6gqQKBbAmnUC78pLo';
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzMzMzMzMzMy0zMzMzLTQzMzMtODMzMy0zMzMzMzMzMzMzMzMiLCJyb2xlIjoib3duZXIiLCJzaG9wX2lkIjoiMTExMTExMTEtMTExMS00MTExLTgxMTEtMTExMTExMTExMTExIiwidXNlcm5hbWUiOiJvd25lciIsImlhdCI6MTc2MDYyOTU3MywiZXhwIjoxNzYxMjM0MzczfQ.OMrPGfOy3NNY5fOhwgJOYceNqrrsc7yZJVmAkXgZ7bc';
 
 // 👇 Default headers helper
 export const defaultHeaders = (token?: string) => ({
