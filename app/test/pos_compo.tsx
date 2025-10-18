@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { SafeAreaView, ScrollView, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { FlatList, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { useTheme, text, space, layout, radius, elevation } from '@/src/theme';
 import * as POS from '@/src/components/for_pos_only';
@@ -77,7 +78,10 @@ export default function POSComponentsPreview() {
   const fx = { label: 'USD→SOS', detail: '27,000 @ 28,000', tone: 'warning' as const };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.background }}>
+    <SafeAreaView
+        edges={['top', 'bottom', 'left', 'right']}
+        style={{ flex: 1, backgroundColor: t.colors.background }}
+        >
       <Stack.Screen
         options={{
           title: 'POS Components',
@@ -96,7 +100,13 @@ export default function POSComponentsPreview() {
         }}
       />
 
-      <ScrollView contentContainerStyle={{ padding: layout.containerPadding, gap: space.lg }}>
+    <FlatList
+        data={[0]}                         // dummy item — we render everything in the header
+        keyExtractor={() => 'content'}
+        renderItem={null as any}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={
+          <View style={{ padding: layout.containerPadding, gap: space.lg }}>
 
         {/* MoneyInput + AmountKeypad */}
         <Section title="MoneyInput + AmountKeypad">
@@ -184,7 +194,7 @@ export default function POSComponentsPreview() {
               { id: 'c2', name: 'Maryan' },
             ].filter(c => c.name.toLowerCase().includes(q.toLowerCase()))}
             {...({} as any)}
-            listProps={{ scrollEnabled: false }}
+            
           />
           <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.sm }}>
             <DemoBtn label="Open Confirm" onPress={() => setConfirmOpen(true)} />
@@ -292,7 +302,9 @@ export default function POSComponentsPreview() {
           title="Manager PIN"
           {...({} as any)}
         />
-      </ScrollView>
+          </View>
+        }
+      />
     </SafeAreaView>
   );
 }
