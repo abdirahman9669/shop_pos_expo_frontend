@@ -13,6 +13,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { themeFor } from '@/src/theme/tokens';
 import { ThemeProvider as AppThemeProvider } from '@/src/theme/provider';
+import { AuthProvider } from '@/src/auth/AuthContext';
+import { PageActionsProvider } from '@/src/ux/PageActionsProvider';
 
 // ✅ Only import ToastProvider (no viewport)
 import { ToastProvider } from '@/src/components/Toast';
@@ -42,6 +44,8 @@ export default function RootLayout() {
   return (
     <AppThemeProvider initialMode={colorScheme === 'dark' ? 'dark' : 'light'}>
       <ToastProvider>
+        <PageActionsProvider> 
+          <AuthProvider>
         <NavThemeProvider value={navTheme}>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -52,6 +56,8 @@ export default function RootLayout() {
           </Stack>
           <StatusBar style={appTheme.mode === 'dark' ? 'light' : 'dark'} />
         </NavThemeProvider>
+          </AuthProvider>
+        </PageActionsProvider>
       </ToastProvider>
     </AppThemeProvider>
   );

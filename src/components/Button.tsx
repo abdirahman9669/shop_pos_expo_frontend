@@ -1,6 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ActivityIndicator, GestureResponderEvent, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
 import { useTheme, text, radius, elevation, motion } from '@/src/theme';
+import { usePageActions } from '@/src/ux/PageActionsProvider';
+import { ensureMinTouchSizeFromStyle } from '@/src/ux/touchable';
+
+
+
+
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'warning';
 type Size = 'sm' | 'md' | 'lg';
@@ -36,6 +42,20 @@ export function Button({
 }: ButtonProps) {
   const { theme: t } = useTheme();
 
+  // assuming your component signature looks like:
+// export function Button({ title, variant = 'primary', ...rest }: ButtonProps) {
+const id = React.useId();
+const { registerPrimary, unregisterPrimary } = usePageActions();
+
+useEffect(() => {
+  if (variant === 'primary') {
+    registerPrimary(id);
+    return () => unregisterPrimary(id);
+  }
+  // if not primary, no-op
+  return;
+}, [variant, id, registerPrimary, unregisterPrimary]);
+
   const v = {
     primary:   t.colors.primary,
     secondary: t.colors.secondary,
@@ -50,7 +70,12 @@ export function Button({
   const opacity = disabled ? t.states.disabled : 1;
 
   return (
-    <TouchableOpacity
+      <TouchableOpacity
+        hitSlop={ensureMinTouchSizeFromStyle([
+          styles.base,
+          { minHeight: 44 },                   // you already have this
+          style,
+        ])}
       activeOpacity={0.85}
       onPress={disabled || loading ? undefined : onPress}
       style={[

@@ -26,6 +26,7 @@ export function PINPad({ onSubmit, title = 'Manager PIN' }: { onSubmit: (pin: st
             {row.split('').map((d) => <Key key={d} label={d} onPress={() => press(d)} />)}
           </View>
         ))}
+        
         <View style={{ flexDirection: 'row', gap: space.sm }}>
           <Key label="⌫" onPress={back} />
           <Key label="0" onPress={() => press('0')} />

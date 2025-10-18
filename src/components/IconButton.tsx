@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, ViewStyle, StyleSheet } from 'react-native';
 import { useTheme, elevation, radius } from '@/src/theme';
+import { ensureMinTouchSize } from '@/src/ux/touchable';
 
 type Size = 'sm' | 'md' | 'lg';
 type Variant = 'primary' | 'secondary' | 'neutral' | 'ghost';
@@ -37,6 +38,7 @@ export function IconButton({
 
   return (
     <TouchableOpacity
+        hitSlop={ensureMinTouchSize(32, 32)}
       testID={testID}
       activeOpacity={0.85}
       disabled={disabled}

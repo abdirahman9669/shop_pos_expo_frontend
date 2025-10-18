@@ -3,7 +3,7 @@ import { FlatList, View, Text, StyleSheet, TouchableOpacity } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { useTheme, text, space, layout, radius, elevation } from '@/src/theme';
-import * as POS from '@/src/components/for_pos_only';
+import { Button } from '@/src/components'; // wherever your real Button is exported from
 
 
 // POS-only components (barrel)
@@ -59,6 +59,8 @@ const heldOrders = [
   { id: 'h2', label: 'Table 4', created_at: new Date(Date.now() - 600000).toISOString(), items_count: 2, total_usd: 3.49 },
 ];
 
+
+//npx eslint app/test/pos_compo.tsx --rule "local/one-primary-per-file:error"
 export default function POSComponentsPreview() {
 
   const { theme: t, toggleLightDark, resolvedMode } = useTheme();
@@ -75,10 +77,13 @@ export default function POSComponentsPreview() {
   const [discount, setDiscount] = useState<{ type: 'PCT'|'AMT'; value: number }>({ type: 'PCT', value: 10 });
 
   const cartTotal = useMemo(() => mockCart.reduce((s, l) => s + l.total_usd, 0), []);
-  const fx = { label: 'USD→SOS', detail: '27,000 @ 28,000', tone: 'warning' as const };
+  //const fx = { label: 'USD→SOS', detail: '27,000 @ 28,000', tone: 'warning' as const };
 
   return (
+    
     <SafeAreaView
+
+    
         edges={['top', 'bottom', 'left', 'right']}
         style={{ flex: 1, backgroundColor: t.colors.background }}
         >
@@ -132,6 +137,10 @@ export default function POSComponentsPreview() {
             />
           ) : null}
         </Section>
+
+
+
+
 
         {/* CartLineItem + TotalsRibbon + ChangeDuePanel */}
         <Section title="CartLineItem / TotalsRibbon / ChangeDuePanel">
@@ -294,6 +303,12 @@ export default function POSComponentsPreview() {
           onConfirm={() => setConfirmOpen(false)}
           {...({} as any)}
         />
+<Button title="Primary" onPress={() => {}} />
+<Button title="Loading" loading onPress={() => {}} />
+<Button title="Disabled" disabled onPress={() => {}} />
+<Button title="Secondary" variant="secondary" onPress={() => {}} />
+
+
 
         <PINPad
           visible={pinOpen}

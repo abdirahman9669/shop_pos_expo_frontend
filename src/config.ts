@@ -1,4 +1,5 @@
 // src/config.ts
+// src/api/authedFetch.ts
 
 // 👇 Put your machine's LAN IP here (not localhost)
 const LAN_IP = 'http://192.168.100.13:5000'; // ← EDIT ME
@@ -14,9 +15,7 @@ function guessBase() {
 export const API_BASE = guessBase();
 
 // 👇 Put your JWT token here
-export const TOKEN =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzMzMzMzMzMy0zMzMzLTQzMzMtODMzMy0zMzMzMzMzMzMzMzMiLCJyb2xlIjoib3duZXIiLCJzaG9wX2lkIjoiMTExMTExMTEtMTExMS00MTExLTgxMTEtMTExMTExMTExMTExIiwidXNlcm5hbWUiOiJvd25lciIsImlhdCI6MTc2MDYyOTU3MywiZXhwIjoxNzYxMjM0MzczfQ.OMrPGfOy3NNY5fOhwgJOYceNqrrsc7yZJVmAkXgZ7bc';
-
+export const TOKEN = 'vv';
 // 👇 Default headers helper
 export const defaultHeaders = (token?: string) => ({
   'Content-Type': 'application/json',

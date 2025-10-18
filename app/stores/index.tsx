@@ -12,10 +12,26 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { API_BASE, TOKEN } from '@/src/config';
 
-/** ===== TEMP auth ===== */
-const AUTH = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
+import { API_BASE } from '@/src/config';
+import { loadAuth } from '@/src/auth/storage';
+
+import { useAuth } from '@/src/auth/AuthContext';
+
+function HeaderRight() {
+  const { user, shop, signOut } = useAuth();
+  // user?.username, shop?.name are available
+}
+
+// Build headers using the latest token from storage
+async function authHeaders() {
+  const auth = await loadAuth();           // { token, user, shop, ... } or null
+  const token = auth?.token;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
 /** ===== Types ===== */
 type StoreRow = {
@@ -65,7 +81,7 @@ export default function StoresIndexScreen() {
 
     try {
       // Your current GET /api/stores supports ?shop_id, we’ll just call with no params
-      const r = await fetch(`${API_BASE}/api/stores`, { headers: AUTH });
+      const r = await fetch(`${API_BASE}/api/stores`, { headers: await authHeaders() });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const j = await r.json();
       // Normalize: j can be array (your current code returns rows directly)
@@ -99,7 +115,7 @@ export default function StoresIndexScreen() {
   const fetchStatsForStore = useCallback(async (storeId: string) => {
     try {
       // Prefer a dedicated backend if you’ve added it: GET /api/stores/:id/stock-summary
-      const r = await fetch(`${API_BASE}/api/stores/${storeId}/stock-summary`, { headers: AUTH });
+      const r = await fetch(`${API_BASE}/api/stores/${storeId}/stock-summary`, { headers: await authHeaders() });
       if (!r.ok) {
         // Endpoint not available yet: set nulls so UI shows dashes
         setStats(prev => ({ ...prev, [storeId]: { products_count: null, inventory_value_usd: null } }));

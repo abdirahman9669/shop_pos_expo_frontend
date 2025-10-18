@@ -240,6 +240,27 @@ export default function HomeScreen() {
       </ThemedView>
 
       <ThemedView style={styles.stepContainer}>
+        <Link href="/test/hitslop" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ hitslop test page
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+
+
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/auth/login" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ login page
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+
+      <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 1: Try it</ThemedText>
         <ThemedText>
           Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes. Press{' '}
