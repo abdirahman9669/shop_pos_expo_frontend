@@ -1,36 +1,36 @@
 // src/api/client.ts
-export type LoginBody = { username: string; password: string };
 import { API_BASE } from '@/src/config';
 
-export type LoginSuccess = {
+type LoginPayload = {
+  username: string;
+  password: string;
+  shop_code?: string | null;
+  phone_number?: string | null;
+};
+
+type LoginResponse = {
   ok: true;
   token: string;
   user: { id: string; username: string; role: string; shop_id: string };
-  shop: { id: string; name: string; slug: string };
-  expires_in: string; // "7d"
+  shop: { id: string; name: string; slug: string; code?: string; phone_number?: string } | null;
+  expires_in: string;
 };
 
-export type LoginResponse = LoginSuccess | { ok: false; error?: string };
+export async function login(payload: LoginPayload): Promise<LoginResponse> {
+  // client-side guard: require at least one of shop_code/phone_number
+  if (!payload.shop_code && !payload.phone_number) {
+    throw new Error('Provide either shop code or phone number.');
+  }
 
-const BASE_URL = API_BASE;
-
-export async function login(body: LoginBody): Promise<LoginSuccess> {
-  const res = await fetch(`${BASE_URL}/api/auth/login`, {
+  const r = await fetch(`${API_BASE}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify(payload),
   });
 
-  let data: LoginResponse;
-  try {
-    data = await res.json();
-  } catch {
-    throw new Error('Invalid server response.');
+  const j = await r.json();
+  if (!r.ok || !j?.ok) {
+    throw new Error(j?.error || `Login failed (HTTP ${r.status})`);
   }
-
-  if (!res.ok || !data.ok) {
-    throw new Error((data as any)?.error || `Login failed (${res.status}).`);
-  }
-
-  return data as LoginSuccess;
+  return j as LoginResponse;
 }

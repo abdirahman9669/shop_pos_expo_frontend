@@ -15,9 +15,15 @@ type AuthState = {
   shop: Shop | null;
   loading: boolean;    // bootstrapping or signing in
 };
-
+/*
 type AuthCtx = AuthState & {
   signIn: (username: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+};
+*/
+
+type AuthCtx = AuthState & {
+  signIn: (form: { username: string; password: string; shop_code?: string | null; phone_number?: string | null }) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -49,17 +55,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-        const signIn = useCallback(async (username: string, password: string) => {
-        setState(s => ({ ...s, loading: true }));
-        try {
-            const res = await loginApi({ username, password });
-            await saveAuth(res.token, { user: res.user, shop: res.shop, expires_in: res.expires_in });
-            setState({ token: res.token, user: res.user, shop: res.shop, loading: false });
-        } catch (e) {
-            setState(s => ({ ...s, loading: false }));
-            throw e;
-        }
-        }, []);
+            const signIn: AuthCtx['signIn'] = async (form) => {
+            setState(s => ({ ...s, loading: true }));
+            try {
+                const res = await loginApi(form);
+
+                await saveAuth(res.token, { user: res.user, shop: res.shop, expires_in: res.expires_in });
+                setState({ token: res.token, user: res.user, shop: res.shop, loading: false });
+
+                // 👇 Redirect to home (or main dashboard)
+                router.replace('/');
+            } catch (e) {
+                setState(s => ({ ...s, loading: false }));
+                throw e;
+            }
+            };
+
 
             const signOut = useCallback(async () => {
             // get token (prefer in-memory, fall back to persisted)
