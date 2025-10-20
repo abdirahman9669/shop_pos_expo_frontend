@@ -377,13 +377,30 @@ export default function PurchaseNew() {
         pay: { method: payMethod, amount_usd: n(amountPaidUsd, 0) },
       };
 
-      const r = await fetch(URLS.purchases, {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify(body),
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
+      const r = await fetch(URLS.purchases, { method: 'POST', headers: authHeaders, body: JSON.stringify(body) });
+      const raw = await r.text();
+      let j: any = null;
+      try { j = raw ? JSON.parse(raw) : null; } catch {}
+
+      if (!r.ok) {
+        // Build a nice human-readable message from whatever fields are present
+        const bits = [
+          j?.error,                                              // backend one-liner (may be short)
+          j?.message,                                            // backend human message
+          j?.capability ? `Capability: ${j.capability}` : null,
+          j?.policy     ? `Policy: ${j.policy}`           : null,
+          j?.reason     ? `Reason: ${j.reason}`           : null,
+          (j?.shop_mode || j?.user_mode)
+            ? `Shop: ${j?.shop_mode ?? 'none'} | User: ${j?.user_mode ?? 'none'}`
+            : null,
+          j?.hint,                                               // actionable hint
+        ].filter(Boolean).join('\n');
+
+        const err = new Error(bits || `HTTP ${r.status}`);
+        // keep structured payload if you want to inspect later
+        (err as any).payload = j;
+        throw err;
+      }
 
       Alert.alert('✅ Purchase saved', j?.purchase_id || 'OK');
       setLines([]);
