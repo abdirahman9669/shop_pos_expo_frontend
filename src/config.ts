@@ -2,12 +2,12 @@
 // src/api/authedFetch.ts
 
 // 👇 Put your machine's LAN IP here (not localhost)
-const LAN_IP = 'http://192.168.100.13:5000'; // ← EDIT ME
+const LAN_IP = 'http://172.20.10.4:5000'; // ← EDIT ME
 
 function guessBase() {
   if (typeof navigator !== 'undefined' && /Android/.test(navigator.userAgent)) {
     // Android emulator special host
-    return 'http://192.168.100.13:5000';
+    return 'http://172.20.10.4:5000';
   }
   return LAN_IP;
 }
