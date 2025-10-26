@@ -1,14 +1,19 @@
+// src/components/Button.tsx
 import React, { useEffect } from 'react';
 import { ActivityIndicator, GestureResponderEvent, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
-import { useTheme, text, radius, elevation, motion } from '@/src/theme';
+import { useTheme, text, radius, elevation } from '@/src/theme';
 import { usePageActions } from '@/src/ux/PageActionsProvider';
 import { ensureMinTouchSizeFromStyle } from '@/src/ux/touchable';
 
+type Variant =
+  | 'primary'
+  | 'secondary'
+  | 'ghost'
+  | 'danger'
+  | 'success'
+  | 'warning'
+  | 'solid';            // ← NEW alias (maps to primary)
 
-
-
-
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'warning';
 type Size = 'sm' | 'md' | 'lg';
 
 export type ButtonProps = {
@@ -22,7 +27,7 @@ export type ButtonProps = {
   left?: React.ReactNode;
   right?: React.ReactNode;
   fullWidth?: boolean;
-  elevationLevel?: 0|1|2|3|4;
+  elevationLevel?: 0 | 1 | 2 | 3 | 4;
   testID?: string;
 };
 
@@ -42,52 +47,52 @@ export function Button({
 }: ButtonProps) {
   const { theme: t } = useTheme();
 
-  // assuming your component signature looks like:
-// export function Button({ title, variant = 'primary', ...rest }: ButtonProps) {
-const id = React.useId();
-const { registerPrimary, unregisterPrimary } = usePageActions();
+  // Register "primary" buttons with PageActions
+  const id = React.useId();
+  const { registerPrimary, unregisterPrimary } = usePageActions();
+  useEffect(() => {
+    const key = variant === 'solid' ? 'primary' : variant; // treat solid as primary
+    if (key === 'primary') {
+      registerPrimary(id);
+      return () => unregisterPrimary(id);
+    }
+    return;
+  }, [variant, id, registerPrimary, unregisterPrimary]);
 
-useEffect(() => {
-  if (variant === 'primary') {
-    registerPrimary(id);
-    return () => unregisterPrimary(id);
-  }
-  // if not primary, no-op
-  return;
-}, [variant, id, registerPrimary, unregisterPrimary]);
+  // Normalize "solid" -> "primary" for styling
+  const key = variant === 'solid' ? 'primary' : variant;
 
-  const v = {
+  const palette = {
     primary:   t.colors.primary,
     secondary: t.colors.secondary,
     danger:    t.colors.danger,
     success:   t.colors.success,
     warning:   t.colors.warning,
     ghost:     { base: 'transparent', onBase: t.colors.textPrimary, surface: 'transparent', onSurface: t.colors.textPrimary, border: t.colors.border },
-  }[variant];
+  }[key];
 
   const paddings = { sm: 10, md: 12, lg: 14 } as const;
-  const font = { sm: 'label' as const, md: 'label' as const, lg: 'label' as const }[size];
+  const fontKey = { sm: 'label' as const, md: 'label' as const, lg: 'label' as const }[size];
   const opacity = disabled ? t.states.disabled : 1;
 
+  const isGhost = key === 'ghost';
+
   return (
-      <TouchableOpacity
-        hitSlop={ensureMinTouchSizeFromStyle([
-          styles.base,
-          { minHeight: 44 },                   // you already have this
-          style,
-        ])}
+    <TouchableOpacity
+      accessibilityRole="button"
+      hitSlop={ensureMinTouchSizeFromStyle([styles.base, { minHeight: 44 }, style])}
       activeOpacity={0.85}
       onPress={disabled || loading ? undefined : onPress}
       style={[
         styles.base,
         elevationLevel ? elevation[elevationLevel] : undefined,
         {
-          backgroundColor: variant === 'ghost' ? 'transparent' : v.base,
+          backgroundColor: isGhost ? 'transparent' : (palette.base as string),
           paddingVertical: paddings[size],
           paddingHorizontal: fullWidth ? 16 : 14,
           borderRadius: radius.md,
-          borderWidth: variant === 'ghost' ? 1 : 0,
-          borderColor: v.border,
+          borderWidth: isGhost ? 1 : 0,
+          borderColor: palette.border as string,
           opacity,
           alignSelf: fullWidth ? 'stretch' : 'auto',
         },
@@ -97,9 +102,9 @@ useEffect(() => {
     >
       {left ? <>{left}</> : null}
       {loading ? (
-        <ActivityIndicator color={variant === 'ghost' ? t.colors.textPrimary : v.onBase} style={{ marginHorizontal: 6 }} />
+        <ActivityIndicator color={isGhost ? (t.colors.textPrimary as string) : (palette.onBase as string)} style={{ marginHorizontal: 6 }} />
       ) : (
-        <Text style={[text(font, variant === 'ghost' ? t.colors.textPrimary : v.onBase), styles.title]}>
+        <Text style={[text(fontKey, isGhost ? (t.colors.textPrimary as string) : (palette.onBase as string)), styles.title]}>
           {title}
         </Text>
       )}

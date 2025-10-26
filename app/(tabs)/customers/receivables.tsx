@@ -88,7 +88,7 @@ export default function CustomersReceivablesScreen() {   // 👈 DEFAULT EXPORT
           onRefresh={load}
           ItemSeparatorComponent={() => <View style={s.sep}/>}
           renderItem={({item}) => (
-            <TouchableOpacity onPress={() => router.push({ pathname: '/customer/[id]', params: { id: item.customer_id, name: item.customer_name } })}>
+            <TouchableOpacity onPress={() => router.push({ pathname: '/customers/[id]', params: { id: item.customer_id, name: item.customer_name } })}>
               <View style={[s.row, s.dataRow]}>
                 <View style={s.cellName}>
                   <Text style={{fontWeight:'600'}} numberOfLines={1}>{item.customer_name}</Text>

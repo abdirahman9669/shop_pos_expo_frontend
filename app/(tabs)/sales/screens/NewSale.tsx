@@ -1,28 +1,30 @@
+
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList, Modal, Alert, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
- import { api, Lot, Product } from '../lib/api';
-import { Line, Device, CashSession, Customer, Rate, CartSnapshot } from '../lib/types';
+ import { api, Lot, Product } from '@/src/sale/lib/api';
+import { Line, Device, CashSession, Customer, Rate, CartSnapshot } from '@/src/sale/lib/types';
 // around line ~15
-import { usdCeil2, sosInt, money, roundSOS1000, calcRoundingDiff } from '../lib/math';
+import { usdCeil2, sosInt, money, roundSOS1000, calcRoundingDiff } from '@/src/sale/lib/math';
 
-import { useSaleCart } from '../hooks/useSaleCart';
-import { useCarts } from '../hooks/useCarts';
-import { useSalePayments } from '../hooks/useSalePayments';
-import { useScanHandler } from '../hooks/useScanHandler';
-import ExchangeBlock from '../components/exchange/ExchangeBlock';
+import { useSaleCart } from '@/src/sale/hooks/useSaleCart';
+import { useCarts } from '@/src/sale/hooks/useCarts';
+import { useSalePayments } from '@/src/sale/hooks/useSalePayments';
+import { useScanHandler } from '@/src/sale/hooks/useScanHandler';
+import ExchangeBlock from '@/src/sale/components/exchange/ExchangeBlock';
 
-import ScanSheet from '../components/ScanSheet';
-import BatchPicker from '../components/BatchPicker';
-import TransferModal from '../components/TransferModal';
-import ProductOverlay from '../components/overlays/ProductOverlay';
-import CustomerOverlay from '../components/overlays/CustomerOverlay';
-import Picker from '../components/Picker';
-import CartTabs from '../components/CartTabs';
+import ScanSheet from '@/src/sale/components/ScanSheet';
+import BatchPicker from '@/src/sale/components/BatchPicker';
+import TransferModal from '@/src/sale/components/TransferModal';
+import ProductOverlay from '@/src/sale/components/overlays/ProductOverlay';
+import CustomerOverlay from '@/src/sale/components/overlays/CustomerOverlay';
+import Picker from '@/src/sale/components/Picker';
+import CartTabs from '@/src/sale/components/CartTabs';
 
 import { API_BASE, TOKEN } from '@/src/config';
-import { postExchangeForExtra } from '../lib/exchange';
+import { postExchangeForExtra } from '@/src/sale/lib/exchange';
 
 const AUTH = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
 

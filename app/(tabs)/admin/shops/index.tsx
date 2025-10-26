@@ -101,9 +101,30 @@ export default function ShopListScreen() {
         )}
       </ScrollView>
 
-      <View style={{ padding: layout.containerPadding }}>
-        <Button title="Refresh" variant="secondary" onPress={loadShops} />
+{/* Footer buttons */}
+      <View style={{ padding: layout.containerPadding, gap: space.sm }}>
+        <Button
+          title="Refresh"
+          variant="secondary"
+          onPress={() => {
+            setError(null);
+            setLoading(true);
+            fetch(`${API_BASE}/api/shops`, { headers: authHeaders })
+              .then((r) => r.json())
+              .then((data) => setShops(Array.isArray(data.items) ? data.items : data.items ?? []))
+              .catch((e) => setError(e?.message || 'Failed to refresh'))
+              .finally(() => setLoading(false));
+          }}
+        />
+
+        {/* ✅ New Capability button */}
+        <Button
+          title="+ Create New Capability"
+          variant="primary"
+          onPress={() => router.push('/admin/capabilities/ListAndCreate')}
+        />
       </View>
+     
     </SafeAreaView>
   );
 }

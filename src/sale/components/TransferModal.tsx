@@ -1,7 +1,7 @@
 // app/sale/components/TransferModal.tsx
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, View, Text, FlatList, TouchableOpacity, ActivityIndicator, TextInput, Platform, Keyboard, KeyboardAvoidingView, TouchableWithoutFeedback, Alert } from 'react-native';
-import type { Store } from '@/app/sales/lib/api';
+import type { Store } from '@/src/sale/lib/api';
 
 type Ctx = { productId: string; batchId: string; fromStoreId: string; fromStoreName?: string; fromOnHand?: number };
 

@@ -1,4 +1,6 @@
 {
+
+  
   "expo": {
     "name": "shop-pos-expo",
     "slug": "shop-pos-expo",
@@ -39,11 +41,14 @@
           }
         }
       ],
-      "expo-barcode-scanner"
+      "expo-barcode-scanner",
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": false,
+      "newArchEnabled": false
     }
   }
 }

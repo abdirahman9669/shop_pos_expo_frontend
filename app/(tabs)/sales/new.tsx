@@ -7,10 +7,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { api, Lot, Product } from '@/app/sales/lib/api';
-import ScanSheet from '@/app/sales/components/ScanSheet';
-import BatchPicker from '@/app/sales/components/BatchPicker';
-import TransferModal from '@/app/sales/components/TransferModal';
+import { api, Lot, Product } from '@/src/sale/lib/api';
+import ScanSheet from '@/src/sale/components/ScanSheet';
+import BatchPicker from '@/src/sale/components/BatchPicker';
+import TransferModal from '@/src/sale/components/TransferModal';
 import { API_BASE, TOKEN } from '@/src/config';
 
 const AUTH = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };

@@ -1,366 +1,401 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet, TouchableOpacity } from 'react-native'; // ← added TouchableOpacity
-import { Link } from 'expo-router';
+// app/(shell)/index.tsx
+import React from 'react';
+import {
+  AppState,
+  RefreshControl,
+  ScrollView,
+  Text,
+  Pressable,
+  View,
+} from 'react-native';
+import { Stack, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { useAuth } from '@/src/auth/AuthContext';
+import { useCapabilities } from '@/src/hooks/useCapabilities';
+import { useOwnerDashboard } from '@/src/hooks/useOwnerDashboard';
+import { useTheme, text, space } from '@/src/theme';
+import { Button, Card, SegmentedControl } from '@/src/components';
+import DashboardKPICards from '@/src/components/dashboard/owner/DashboardKPICards';
+import SalesChart from '@/src/components/dashboard/owner/SalesChart';
+import TopProductsTable from '@/src/components/dashboard/owner/TopProductsTable';
+import AlertsPanel from '@/src/components/dashboard/owner/AlertsPanel';
+
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
+
+  const { theme: t, toggleLightDark, resolvedMode } = useTheme();
+  const router = useRouter();
+  const auth = useAuth();
+
+  // Caps + dashboard data
+  const { ready, can, refresh: refreshCaps } = useCapabilities();
+  const {
+    from, to, setFrom, setTo, grain, setGrain,
+    loading, error, kpis, series, topProducts, alerts, reload,
+  } = useOwnerDashboard();
+
+  // Local state
+  const [refreshing, setRefreshing] = React.useState(false);
+  const refreshingGuard = React.useRef(false);
+  const [rangePreset, setRangePreset] = React.useState<'7d' | '30d' | '90d'>('7d');
+
+  // Derived
+  const userName = auth?.user?.username ?? 'nn';
+  const userRole = auth?.user?.role ?? '';
+  const greeting = React.useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good Morning';
+    if (h < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  }, []);
+
+  // Header (native header is hidden by shell, but we can still keep options if needed)
+  const headerRightEl = React.useMemo(
+    () => (
+      <Button
+        title={resolvedMode === 'light' ? 'Light' : 'Dark'}
+        variant="ghost"
+        onPress={toggleLightDark}
+      />
+    ),
+    [resolvedMode, toggleLightDark]
+  );
+  const headerRight = React.useCallback(() => headerRightEl, [headerRightEl]);
+  const screenOptions = React.useMemo(
+    () => ({
+      title: 'Home',
+      headerStyle: { backgroundColor: t.colors.surface },
+      headerTintColor: t.colors.textPrimary,
+      headerRight,
+    }),
+    [t.colors.surface, t.colors.textPrimary, headerRight]
+  );
+
+  // Helpers
+  const setPreset = React.useCallback(
+    (days: number, tag: '7d' | '30d' | '90d') => {
+      setFrom(new Date(Date.now() - (days - 1) * 24 * 3600 * 1000));
+      setTo(new Date());
+      setRangePreset(tag);
+    },
+    [setFrom, setTo]
+  );
+
+  const SectionTitle = React.useCallback(
+    ({ icon, title }: { icon: React.ReactNode; title: string }) => (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        {icon}
+        <Text style={text('h3', t.colors.textPrimary)}>{title}</Text>
+      </View>
+    ),
+    [t.colors.textPrimary, text]
+  );
+
+  const ActionTile = React.useCallback(
+    ({
+      label,
+      icon,
+      onPress,
+      disabled,
+    }: {
+      label: string;
+      icon: React.ReactNode;
+      onPress: () => void;
+      disabled?: boolean;
+    }) => (
+      <Pressable
+        onPress={onPress}
+        disabled={disabled}
+        android_ripple={{ color: t.colors.border }}
+        style={({ pressed }) => ({
+          width: '31%',
+          aspectRatio: 1,
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: t.colors.border,
+          backgroundColor: t.colors.surface,
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          opacity: disabled ? 0.4 : pressed ? 0.9 : 1,
+        })}
+      >
+        {icon}
+        <Text style={text('caption', t.colors.textPrimary)} numberOfLines={2}>
+          {label}
+        </Text>
+      </Pressable>
+    ),
+    [t.colors.border, t.colors.surface, t.colors.textPrimary, text]
+  );
+
+  // Refresh behaviors
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshCaps?.();
+      reload?.();
+      return () => {};
+    }, [refreshCaps, reload])
+  );
+
+  React.useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        refreshCaps?.();
+        reload?.();
       }
-    >
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
+    });
+    return () => sub.remove();
+  }, [refreshCaps, reload]);
 
-      {/* ⬇️ New: quick link to Create Product screen */}
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/create-product" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ Create Product
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-      {/* ⬇️ New: quick link to Create Product screen */}
+  const onRefresh = React.useCallback(async () => {
+    if (refreshingGuard.current) return;
+    refreshingGuard.current = true;
+    setRefreshing(true);
+    try {
+      await Promise.all([Promise.resolve(reload?.()), Promise.resolve(refreshCaps?.())]);
+    } finally {
+      setRefreshing(false);
+      refreshingGuard.current = false;
+    }
+  }, [refreshCaps, reload]);
 
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/select-products" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ Select Products
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
+  // Render
+  return (
+    <>
+      <Stack.Screen options={screenOptions} />
 
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/sales/new" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ new salee
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/sales/screens/NewSale" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ new sale small
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/purchase-new" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ Purchase
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
+      {/* The shell already adds padding & background; keep content lean here */}
+      <ScrollView
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={t.colors.textSecondary as string}
+            colors={[t.colors.primary.base as string]}
+            progressBackgroundColor={t.colors.surface as string}
+            progressViewOffset={56}
+          />
+        }
+        contentContainerStyle={{ gap: space.lg, paddingBottom: space.lg }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Welcome */}
+        <Card>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View
+              style={{
+                width: 42, height: 42, borderRadius: 21,
+                alignItems: 'center', justifyContent: 'center',
+                backgroundColor: t.colors.primary.base,
+              }}
+            >
+              <Ionicons name="sparkles-outline" size={20} color={t.colors.primary.onBase as string} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={text('h3', t.colors.textPrimary)}>{greeting}, {userName}</Text>
+              {!!userRole && (
+                <Text style={text('caption', t.colors.textSecondary)}>
+                  Role: {userRole}
+                </Text>
+              )}
+            </View>
+          </View>
+        </Card>
 
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/account-types" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ Account Type 
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
+        {/* Quick Actions */}
+        <Card>
+          <SectionTitle
+            icon={<Ionicons name="flash-outline" size={18} color={t.colors.textSecondary as string} />}
+            title="Quick Actions"
+          />
+          <View style={{ height: space.xs }} />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', rowGap: 12 }}>
+            <ActionTile
+              label="Create Product"
+              icon={
+                <View style={{
+                  width: 48, height: 48, borderRadius: 24,
+                  backgroundColor: 'rgba(79,70,229,0.12)',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <MaterialCommunityIcons name="cube-outline" size={24} color="#4F46E5" />
+                </View>
+              }
+              onPress={() => router.push('/products/new')}
+            />
 
-            <ThemedView style={styles.stepContainer}>
-        <Link href="/customers/receivables" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ customers AR list  payments
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
+            {ready && can('sales:new') && (
+              <ActionTile
+                label="New Sale"
+                icon={
+                  <View style={{
+                    width: 48, height: 48, borderRadius: 24,
+                    backgroundColor: 'rgba(22,163,74,0.12)',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Ionicons name="cash-outline" size={24} color="#16A34A" />
+                  </View>
+                }
+                onPress={() => router.push('/sales/screens/NewSale')}
+              />
+            )}
 
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/purchases" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ Purchases
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
+            <ActionTile
+              label="Customers"
+              icon={
+                <View style={{
+                  width: 48, height: 48, borderRadius: 24,
+                  backgroundColor: 'rgba(14,165,233,0.12)',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Ionicons name="people-outline" size={22} color="#0EA5E9" />
+                </View>
+              }
+              onPress={() => router.push('/')}
+            />
 
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/sales" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ sales
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
+            <ActionTile
+              label="Suppliers"
+              icon={
+                <View style={{
+                  width: 48, height: 48, borderRadius: 24,
+                  backgroundColor: 'rgba(249,115,22,0.12)',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Ionicons name="storefront" size={22} color="#F97316" />
+                </View>
+              }
+              onPress={() => router.push('/')}
+            />
 
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/payments" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ payments
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
+            <ActionTile
+              label="Payments"
+              icon={
+                <View style={{
+                  width: 48, height: 48, borderRadius: 24,
+                  backgroundColor: 'rgba(147,51,234,0.122)',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Ionicons name="card-outline" size={22} color="#9333EA" />
+                </View>
+              }
+              onPress={() => router.push('/')}
+            />
 
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/suppliers" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ suppliers
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
+            {ready && can('purchases:new') && (
+              <ActionTile
+                label="New Purchase"
+                icon={
+                  <View style={{
+                    width: 48, height: 48, borderRadius: 24,
+                    backgroundColor: 'rgba(234,179,8,0.12)',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Ionicons name="cart-outline" size={22} color="#EAB308" />
+                  </View>
+                }
+                onPress={() => router.push('/')}
+              />
+            )}
+          </View>
+        </Card>
 
+        {/* Filters */}
+        <Card>
+          <SectionTitle
+            icon={<Ionicons name="funnel-outline" size={18} color={t.colors.textSecondary as string} />}
+            title="Filters"
+          />
+          <View style={{ height: space.xs }} />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space.sm }}>
+            <Text style={text('label', t.colors.textSecondary)}>Range:</Text>
+            <SegmentedControl
+              value={rangePreset}
+              onChange={(v) => {
+                if (v === '7d') setPreset(7, '7d');
+                if (v === '30d') setPreset(30, '30d');
+                if (v === '90d') setPreset(90, '90d');
+              }}
+              segments={[
+                { value: '7d', label: '7d' },
+                { value: '30d', label: '30d' },
+                { value: '90d', label: '90d' },
+              ]}
+            />
+            <View style={{ width: space.sm }} />
+            <Text style={text('label', t.colors.textSecondary)}>Granularity:</Text>
+            <SegmentedControl
+              value={grain}
+              onChange={(v) => setGrain(v as any)}
+              segments={[
+                { value: 'day', label: 'Day' },
+                { value: 'week', label: 'Week' },
+                { value: 'month', label: 'Month' },
+              ]}
+            />
+            <View style={{ flex: 1 }} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="calendar-outline" size={16} color={t.colors.textSecondary as string} />
+              <Text style={text('caption', t.colors.textSecondary)}>
+                {from.toDateString()} → {to.toDateString()}
+              </Text>
+            </View>
+          </View>
+        </Card>
 
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/journals" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ journals
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
+        {/* Main content */}
+        {loading ? (
+          <Card>
+            <View style={{ paddingVertical: 6 }}>
+              <Text style={text('body', t.colors.textSecondary)}>Loading…</Text>
+              {!ready && (
+                <Text style={text('caption', t.colors.textSecondary)}>Checking your permissions…</Text>
+              )}
+            </View>
+          </Card>
+        ) : error ? (
+          <Card>
+            <SectionTitle
+              icon={<Ionicons name="alert-circle-outline" size={18} color={t.colors.danger.base as string} />}
+              title="Error"
+            />
+            <Text style={text('body', t.colors.danger.base)}>{error}</Text>
+          </Card>
+        ) : (
+          <>
+            <Card>
+              <SectionTitle
+                icon={<Ionicons name="stats-chart-outline" size={18} color={t.colors.textSecondary as string} />}
+                title="KPIs"
+              />
+              <View style={{ height: space.xs }} />
+              <DashboardKPICards kpis={kpis} />
+            </Card>
 
+            <Card>
+              <View style={{ height: space.sm }} />
+              <View style={{ height: 260 }}>
+                <SalesChart series={series} />
+              </View>
+            </Card>
 
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/stores" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ stores
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
+            <Card>
+              <TopProductsTable items={topProducts} />
+            </Card>
 
-
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/exchange-rates" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ exchange-rates
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/returns/new" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ returns
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-
-
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/cash-sessions" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ cash-sessions
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/barcodes/lookup" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ barcodes lookup
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-
-
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/exchange" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ exchange
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/test/foundation" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ foundation test page
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-
-
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/test/compo" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ F compo test page
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/test/pos_compo" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ pos_compo_only test page
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/test/hitslop" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ hitslop test page
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-
-
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/auth/login" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ login page
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/test/ownerDhasboard" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ Owner dhashboard
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/admin/shops" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ capability admin
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/owner/users" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ capability Owner
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/admin/capabilities/ListAndCreate" asChild>
-          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
-            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
-              ➕ capability create admin
-            </ThemedText>
-          </TouchableOpacity>
-        </Link>
-      </ThemedView>
-
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes. Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction title="Share" icon="square.and.arrow.up" onPress={() => alert('Share pressed')} />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction title="Delete" icon="trash" destructive onPress={() => alert('Delete pressed')} />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+            <Card>
+              <SectionTitle
+                icon={<Ionicons name="notifications-outline" size={18} color={t.colors.textSecondary as string} />}
+                title="Alerts"
+              />
+              <AlertsPanel alerts={alerts} />
+            </Card>
+          </>
+        )}
+      </ScrollView>
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  stepContainer: { gap: 8, marginBottom: 8 },
-  reactLogo: { height: 178, width: 290, bottom: 0, left: 0, position: 'absolute' },
-});
-
-/*
-npx expo start -c
-
-
-SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/th3rdwave/react-native-safe-area-context
- ERROR  Text strings must be rendered within a <Text> component. 
-
- solution 
-import { SafeAreaView } from 'react-native-safe-area-context';
-*/

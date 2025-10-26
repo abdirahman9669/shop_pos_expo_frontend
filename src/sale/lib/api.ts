@@ -10,6 +10,7 @@ function HeaderRight() {
 }
 
 // Build headers using the latest token from storage
+
 async function authHeaders() {
   const auth = await loadAuth();           // { token, user, shop, ... } or null
   const token = auth?.token;

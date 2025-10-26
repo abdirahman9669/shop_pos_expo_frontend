@@ -1,7 +1,7 @@
 // app/sale/components/BatchPicker.tsx
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, ActivityIndicator, FlatList, TouchableWithoutFeedback } from 'react-native';
-import type { Lot } from '@/app/sale/lib/api';
+import type { Lot } from '@/src/sale/lib/api';
 
 type Props = {
   visible: boolean;

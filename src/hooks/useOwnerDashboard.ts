@@ -1,51 +1,77 @@
 // src/hooks/useOwnerDashboard.ts
-import { useEffect, useMemo, useRef, useState } from 'react';
+import * as React from 'react';
 import { fetchSummary, fetchTimeseriesSales, fetchTopProducts } from '@/src/api/dashboard/owner';
 
-export type Grain = 'day'|'week'|'month';
+export type Grain = 'day' | 'week' | 'month';
 
 export function toISODate(date: Date) {
-  // keep day boundary (yyyy-mm-dd) – server already buckets by date_trunc
-  const d = new Date(date); d.setHours(0,0,0,0);
+  // normalize to day start in local tz before shipping to server
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
   return d.toISOString();
 }
 
-export function useOwnerDashboard(initialRange?: { from: Date; to: Date }, initialGrain: Grain = 'day') {
-  const [from, setFrom] = useState<Date>(initialRange?.from ?? new Date(Date.now() - 6*24*3600*1000));
-  const [to, setTo] = useState<Date>(initialRange?.to ?? new Date());
-  const [grain, setGrain] = useState<Grain>(initialGrain);
+export function useOwnerDashboard(
+  initialRange?: { from: Date; to: Date },
+  initialGrain: Grain = 'day'
+) {
+  // ✅ lazy init removes any need to “seed” via effects
+  const [from, setFrom] = React.useState<Date>(() => initialRange?.from ?? new Date(Date.now() - 6 * 864e5));
+  const [to, setTo]     = React.useState<Date>(() => initialRange?.to   ?? new Date());
+  const [grain, setGrain] = React.useState<Grain>(initialGrain);
 
-  const [summary, setSummary] = useState<Awaited<ReturnType<typeof fetchSummary>> | null>(null);
-  const [series, setSeries] = useState<{ date: string; sales_usd: number; tx: number }[]>([]);
-  const [top, setTop] = useState<Awaited<ReturnType<typeof fetchTopProducts>>['items']>([]);
+  const [summary, setSummary]   = React.useState<Awaited<ReturnType<typeof fetchSummary>> | null>(null);
+  const [series, setSeries]     = React.useState<{ date: string; sales_usd: number; tx: number }[]>([]);
+  const [top, setTop]           = React.useState<Awaited<ReturnType<typeof fetchTopProducts>>['items']>([]);
+  const [loading, setLoading]   = React.useState(true);
+  const [error, setError]       = React.useState<string | null>(null);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string| null>(null);
+  const abortRef = React.useRef<AbortController | null>(null);
 
-  const abortRef = useRef<AbortController | null>(null);
+  // ✅ use primitive numbers (timestamps) as deps to avoid object identity churn
+  const fromMs = from.getTime();
+  const toMs   = to.getTime();
 
-  const iso = useMemo(() => ({ from: toISODate(from), to: toISODate(to) }), [from, to]);
+  // manual trigger (e.g., pull-to-refresh)
+  const [tick, setTick] = React.useState(0);
+  const reload = React.useCallback(() => setTick(x => x + 1), []);
 
-  useEffect(() => {
-    setLoading(true); setError(null);
+  React.useEffect(() => {
+    // guard invalid ranges (prevents flip-flop updates)
+    if (fromMs > toMs) return;
+
+    setLoading(true);
+    setError(null);
+
     abortRef.current?.abort();
-    const ac = new AbortController(); abortRef.current = ac;
+    const ac = new AbortController();
+    abortRef.current = ac;
 
-    Promise.all([
-      fetchSummary({ within_days: 90, lookback_days: 30, top_limit: 5 }),
-      fetchTimeseriesSales({ from: iso.from, to: iso.to, granularity: grain, signal: ac.signal }),
-      fetchTopProducts({ from: iso.from, to: iso.to, limit: 5, signal: ac.signal }),
-    ])
-      .then(([sumRes, tsRes, topRes]) => {
+    // build once per run from the primitive deps
+    const fromISO = toISODate(new Date(fromMs));
+    const toISO   = toISODate(new Date(toMs));
+
+    (async () => {
+      try {
+        const [sumRes, tsRes, topRes] = await Promise.all([
+          // if your API supports AbortController, add { signal: ac.signal }
+          fetchSummary({ within_days: 90, lookback_days: 30, top_limit: 5 }),
+          fetchTimeseriesSales({ from: fromISO, to: toISO, granularity: grain, signal: ac.signal }),
+          fetchTopProducts({ from: fromISO, to: toISO, limit: 5, signal: ac.signal }),
+        ]);
+
         setSummary(sumRes);
-        setSeries(tsRes.series || []);
-        setTop(topRes.items || []);
-      })
-      .catch((e) => setError(e?.message || 'Failed to load'))
-      .finally(() => setLoading(false));
+        setSeries(tsRes?.series || []);
+        setTop(topRes?.items || []);
+      } catch (e: any) {
+        if (e?.name !== 'AbortError') setError(e?.message || 'Failed to load');
+      } finally {
+        setLoading(false);
+      }
+    })();
 
     return () => ac.abort();
-  }, [iso.from, iso.to, grain]);
+  }, [fromMs, toMs, grain, tick]); // ✅ stable, primitive deps only
 
   return {
     // state
@@ -53,9 +79,11 @@ export function useOwnerDashboard(initialRange?: { from: Date; to: Date }, initi
     loading, error,
     // data
     summary,
-    kpis: summary?.kpis || null,
+    kpis: summary?.kpis ?? null,
     topProducts: top,
-    alerts: summary?.alerts || { low_stock: [], expiries: [], receivables: [], slow_movers: [], returns_voids: [] },
+    alerts: summary?.alerts ?? { low_stock: [], expiries: [], receivables: [], slow_movers: [], returns_voids: [] },
     series,
+    // actions
+    reload,
   };
 }
