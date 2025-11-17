@@ -21,8 +21,10 @@ import { Card, Button, Divider, ListItem, Tag } from '@/src/components';
 import { loadAuth } from '@/src/auth/storage';
 
 async function authHeaders() {
+  
   const auth = await loadAuth();
   const token = auth?.token;
+
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

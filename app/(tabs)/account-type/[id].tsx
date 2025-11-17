@@ -1,53 +1,110 @@
+// app/(shell)/account-type/[id].tsx
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  SafeAreaView, View, Text, StyleSheet, TextInput,
-  TouchableOpacity, ActivityIndicator, FlatList, Alert,
-} from 'react-native';
-import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
-import { API_BASE,TOKEN  } from '@/src/config';
+import { ActivityIndicator, Pressable, Switch, TextInput, View, Text } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
-const authHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
+import { API_BASE } from '@/src/config';
+import { loadAuth } from '@/src/auth/storage';
+import { useTheme, text, space, layout, radius } from '@/src/theme';
+import { Card, Button, ListItem, Divider, Tag } from '@/src/components';
 
-type Row = {
+/* ---------- auth headers ---------- */
+async function authHeaders() {
+  const auth = await loadAuth();
+  const token = auth?.token;
+  return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+}
+
+/* ---------- types ---------- */
+type TypeRow = { id: string; name: string; normal_side: 'debit'|'credit' };
+type WithBalancesRow = { id: string; name: string; normal_side: 'debit'|'credit'; accounts_count: number; balance_usd: number };
+type AccountRow = {
   id: string;
   name: string;
   type?: string;
-  normal_side?: 'debit' | 'credit';
+  normal_side?: 'debit'|'credit';
   active?: boolean;
   balance_usd?: number;
   createdAt?: string;
 };
 
-const money = (v: any) => {
+/* ---------- utils ---------- */
+const money = (v: any, d = 2) => {
   const n = Number.parseFloat(String(v));
-  return Number.isFinite(n) ? n.toFixed(4) : '0.0000';
+  return Number.isFinite(n) ? n.toFixed(d) : (0).toFixed(d);
 };
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
+const safeErr = (e: any) => {
+  if (typeof e === 'string') return e;
+  if (e?.message) return String(e.message);
+  try { return JSON.stringify(e); } catch { return String(e); }
+};
+const toneForSide = (s: 'debit'|'credit'): 'success'|'warning' => (s === 'debit' ? 'success' : 'warning');
 
+/* ---------- page ---------- */
 export default function AccountTypeDetail() {
-  const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { theme: t } = useTheme();
   const router = useRouter();
 
+  // header info (type + summary)
+  const [loadingHead, setLoadingHead] = useState(true);
+  const [headErr, setHeadErr] = useState<string | null>(null);
+  const [row, setRow] = useState<TypeRow | null>(null);
+  const [agg, setAgg] = useState<WithBalancesRow | null>(null);
+
+  // filters for accounts list
   const today = new Date();
   const jan1 = new Date(today.getFullYear(), 0, 1);
-
   const [from, setFrom] = useState(ymd(jan1));
   const [to, setTo] = useState(ymd(today));
   const [activeOnly, setActiveOnly] = useState(true);
 
-  const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string>('');
+  // accounts list
+  const [loadingList, setLoadingList] = useState(false);
+  const [listErr, setListErr] = useState<string | null>(null);
+  const [rows, setRows] = useState<AccountRow[]>([]);
 
-  const total = useMemo(
+  // total (client-side sum) for the accounts list
+  const totalUsd = useMemo(
     () => rows.reduce((s, r) => s + (Number(r.balance_usd) || 0), 0),
     [rows]
   );
 
-  const fetchAccounts = useCallback(async () => {
+  // Load header data (type + with-balances)
+  const loadHeader = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
-    setErr('');
+    setLoadingHead(true);
+    setHeadErr(null);
+    try {
+      // 1) base type (in case you don’t expose GET /:id)
+      const r = await fetch(`${API_BASE}/api/account-types`, { headers: await authHeaders() });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j?.ok === false) throw new Error(j?.error || `HTTP ${r.status}`);
+      const found: TypeRow | undefined = (j?.data ?? []).find((x: TypeRow) => x.id === id);
+      setRow(found ?? null);
+
+      // 2) with-balances (no date filter here; page-level summary)
+      const rb = await fetch(`${API_BASE}/api/account-types/with-balances`, { headers: await authHeaders() });
+      const jb = await rb.json().catch(() => ({}));
+      if (rb.ok && jb?.ok !== false) {
+        const foundB: WithBalancesRow | undefined = (jb?.data ?? []).find((x: WithBalancesRow) => x.id === id);
+        setAgg(foundB ?? null);
+      }
+    } catch (e) {
+      setRow(null);
+      setAgg(null);
+      setHeadErr(safeErr(e));
+    } finally {
+      setLoadingHead(false);
+    }
+  }, [id]);
+
+  // Load accounts for the type (with filters)
+  const loadAccounts = useCallback(async () => {
+    if (!id) return;
+    setLoadingList(true);
+    setListErr(null);
     try {
       const qs = new URLSearchParams({
         type_id: String(id),
@@ -55,152 +112,177 @@ export default function AccountTypeDetail() {
         from,
         to,
         limit: '200',
-      });
-      const url = `${API_BASE}/api/accounts/with-balances?${qs.toString()}`;
-      const r = await fetch(url, { headers: authHeaders });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
-      setRows(j?.data ?? j ?? []);
-    } catch (e: any) {
-      const msg = e?.message || 'Failed to load accounts';
-      setErr(msg);
-      Alert.alert('Error', msg);
+      }).toString();
+      const url = `${API_BASE}/api/accounts/with-balances?${qs}`;
+      const r = await fetch(url, { headers: await authHeaders() });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j?.ok === false) throw new Error(j?.error || `HTTP ${r.status}`);
+      setRows(j?.data ?? []);
+    } catch (e) {
       setRows([]);
+      setListErr(safeErr(e));
     } finally {
-      setLoading(false);
+      setLoadingList(false);
     }
   }, [id, from, to, activeOnly]);
 
-  useEffect(() => { fetchAccounts(); }, [fetchAccounts]);
-
-  // 🔗 Go to the account contributors screen
-  const onRowPress = (row: Row) => {
-    router.push({
-      pathname: '/account/[id]',
-      params: {
-        id: row.id,
-        name: row.name,
-        from,
-        to,
-      },
-    });
-  };
+  useEffect(() => { loadHeader(); }, [loadHeader]);
+  useEffect(() => { loadAccounts(); }, [loadAccounts]);
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <Stack.Screen options={{ title: name || 'Account Type' }} />
-
-      <View style={s.wrap}>
-        <Text style={s.title}>{name || 'Account Type Detail'}</Text>
-
-        <View style={s.filterRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.label}>From</Text>
-            <TextInput
-              value={from}
-              onChangeText={setFrom}
-              placeholder="YYYY-MM-DD"
-              autoCapitalize="none"
-              keyboardType="numbers-and-punctuation"
-              style={s.input}
-            />
-          </View>
-          <View style={{ width: 12 }} />
-          <View style={{ flex: 1 }}>
-            <Text style={s.label}>To</Text>
-            <TextInput
-              value={to}
-              onChangeText={setTo}
-              placeholder="YYYY-MM-DD"
-              autoCapitalize="none"
-              keyboardType="numbers-and-punctuation"
-              style={s.input}
-            />
-          </View>
-        </View>
-
-        <View style={s.filterRow}>
-          <TouchableOpacity
-            style={[s.toggle, activeOnly ? s.toggleOn : s.toggleOff]}
-            onPress={() => setActiveOnly(v => !v)}
-          >
-            <Text style={s.toggleText}>{activeOnly ? 'Active only' : 'All accounts'}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.reloadBtn} onPress={fetchAccounts} disabled={loading}>
-            <Text style={s.reloadText}>{loading ? 'Loading…' : 'Reload'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {err ? <Text style={s.err}>{err}</Text> : null}
-      </View>
-
-      {loading ? (
-        <View style={s.center}>
-          <ActivityIndicator />
-          <Text style={{ marginTop: 8 }}>Loading accounts…</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={rows}
-          keyExtractor={(item) => item.id}
-          ItemSeparatorComponent={() => <View style={s.sep} />}
-          ListHeaderComponent={
-            <View style={[s.row, s.headerRow]}>
-              <Text style={[s.cell, s.colName, s.headerText]}>name</Text>
-              <Text style={[s.cell, s.colType, s.headerText]}>type</Text>
-              <Text style={[s.cell, s.colSide, s.headerText]}>normal</Text>
-              <Text style={[s.cell, s.colBal, s.headerText]}>balance_usd</Text>
+    <View style={{ flex: 1, paddingHorizontal: layout.containerPadding, paddingTop: space.md, paddingBottom: space.md }}>
+      {/* ---------- Header card: Type info + Update ---------- */}
+      <Card>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <View style={{ marginBottom: 6 }}>
+              <Tag tone={row ? toneForSide(row.normal_side) : 'neutral'} label={row ? row.normal_side.toUpperCase() : '…'} />
             </View>
-          }
-          renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => onRowPress(item)} activeOpacity={0.7}>
-              <View style={[s.row, s.dataRow]}>
-                <Text style={[s.cell, s.colName]} numberOfLines={1}>{item.name}</Text>
-                <Text style={[s.cell, s.colType]} numberOfLines={1}>{item.type || ''}</Text>
-                <Text style={[s.cell, s.colSide]} numberOfLines={1}>{item.normal_side || ''}</Text>
-                <Text style={[s.cell, s.colBal]} numberOfLines={1}>{money(item.balance_usd)}</Text>
+            <View>
+              <Tag tone="neutral" label={row?.name ?? 'Account Type'} />
+            </View>
+            {headErr ? (
+              <View style={{ marginTop: 8 }}>
+                <Tag tone="warning" label={`⚠ ${headErr}`} />
               </View>
-            </TouchableOpacity>
-          )}
-          ListFooterComponent={
-            <View style={s.footer}>
-              <Text style={s.totalText}>Total (USD): {money(total)}</Text>
+            ) : null}
+          </View>
+
+          <Button
+            title="Update"
+            size="sm"
+            onPress={() => router.push({ pathname: '/account-type/update', params: { id } })}
+          />
+        </View>
+
+        <Divider />
+
+        {/* Summary (accounts count + balance USD from /with-balances) */}
+        {loadingHead ? (
+          <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+            <ActivityIndicator />
+          </View>
+        ) : agg ? (
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+            <Tag tone="neutral" label={`Accounts: ${agg.accounts_count}`} />
+            <Tag tone="info" label={`Balance (USD): ${money(agg.balance_usd)}`} />
+          </View>
+        ) : null}
+      </Card>
+
+      {/* ---------- Filters card ---------- */}
+      <View style={{ height: space.md }} />
+      <Card>
+        <View style={{ gap: space.sm }}>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <TextInput
+                value={from}
+                onChangeText={setFrom}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={t.colors.textSecondary as string}
+                style={{
+                  borderWidth: 1, borderColor: t.colors.border, borderRadius: radius.md,
+                  paddingHorizontal: 12, paddingVertical: 10, color: t.colors.textPrimary,
+                  backgroundColor: t.colors.surface,
+                }}
+                autoCapitalize="none"
+              />
             </View>
-          }
-          ListEmptyComponent={<Text style={s.empty}>No accounts found.</Text>}
-          contentContainerStyle={{ paddingBottom: 24 }}
-        />
-      )}
-    </SafeAreaView>
+            <View style={{ flex: 1 }}>
+              <TextInput
+                value={to}
+                onChangeText={setTo}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={t.colors.textSecondary as string}
+                style={{
+                  borderWidth: 1, borderColor: t.colors.border, borderRadius: radius.md,
+                  paddingHorizontal: 12, paddingVertical: 10, color: t.colors.textPrimary,
+                  backgroundColor: t.colors.surface,
+                }}
+                autoCapitalize="none"
+              />
+            </View>
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Tag tone="neutral" label="Active only" />
+              <Switch value={activeOnly} onValueChange={setActiveOnly} />
+            </View>
+            <Button
+              title={loadingList ? 'Loading…' : 'Load'}
+              onPress={loadAccounts}
+              disabled={loadingList}
+            />
+          </View>
+
+          {listErr ? <Tag tone="warning" label={`⚠ ${listErr}`} /> : null}
+        </View>
+      </Card>
+
+      {/* ---------- Table header ---------- */}
+      <View style={{ height: space.md }} />
+      <Card style={{ paddingVertical: 8, paddingHorizontal: layout.cardPadding }}>
+        <View style={{ flexDirection: 'row' }}>
+          <Text style={[text('label', t.colors.textSecondary), { flex: 1 }]}>Name</Text>
+          <Text style={[text('label', t.colors.textSecondary), { width: 80, textAlign: 'right' }]}>Normal</Text>
+          <Text style={[text('label', t.colors.textSecondary), { width: 120, textAlign: 'right' }]}>Balance USD</Text>
+        </View>
+      </Card>
+
+      {/* ---------- Accounts list ---------- */}
+      <Card style={{ paddingHorizontal: 0, paddingVertical: 0, marginTop: space.sm }}>
+        {loadingList && rows.length === 0 ? (
+          <View style={{ alignItems: 'center', paddingVertical: 18 }}>
+            <ActivityIndicator />
+          </View>
+        ) : (
+          <>
+            {rows.map((item) => (
+              <View key={item.id}>
+                <Pressable
+                  onPress={() => router.push({ pathname: '/account/[id]', params: { id: item.id, from, to } })}
+                  android_ripple={{ color: t.colors.border as string }}
+                  style={{ borderRadius: 10 }}
+                  hitSlop={8}
+                >
+                  <View pointerEvents="none">
+                    <ListItem
+                      title={item.name}
+                      subtitle={item.type ? `Type: ${item.type}` : undefined}
+                      right={
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                          <Text style={text('label', t.colors.textSecondary)}>
+                            {item.normal_side?.toUpperCase?.() ?? ''}
+                          </Text>
+                          <Text style={text('label', t.colors.textPrimary)}>
+                            ${money(item.balance_usd)}
+                          </Text>
+                        </View>
+                      }
+                    />
+                  </View>
+                </Pressable>
+                <Divider />
+              </View>
+            ))}
+
+            {rows.length === 0 && !loadingList ? (
+              <View style={{ padding: layout.cardPadding }}>
+                <Tag tone="neutral" label="No accounts found." />
+              </View>
+            ) : null}
+
+            {/* footer total (client-side) */}
+            {rows.length > 0 ? (
+              <View style={{ paddingHorizontal: layout.cardPadding, paddingVertical: 12, alignItems: 'flex-end' }}>
+                <Tag tone="info" label={`Total (USD): ${money(totalUsd)}`} />
+              </View>
+            ) : null}
+          </>
+        )}
+      </Card>
+    </View>
   );
 }
-
-const s = StyleSheet.create({
-  wrap: { padding: 16, gap: 8 },
-  title: { fontWeight: '800', fontSize: 18 },
-  label: { fontWeight: '700', marginBottom: 6 },
-  input: { borderWidth: 1, borderColor: '#e1e1e1', borderRadius: 10, padding: 12, backgroundColor: 'white' },
-  filterRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 12, marginBottom: 8 },
-  toggle: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, flex: 1, alignItems: 'center' },
-  toggleOn: { backgroundColor: '#000' },
-  toggleOff: { backgroundColor: '#d9d9d9' },
-  toggleText: { color: 'white', fontWeight: '800' },
-  reloadBtn: { backgroundColor: '#000', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10 },
-  reloadText: { color: 'white', fontWeight: '800' },
-  err: { color: '#b00020', marginHorizontal: 16 },
-  sep: { height: 6, backgroundColor: '#fafafa' },
-  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, minHeight: 44 },
-  headerRow: { backgroundColor: '#f4f4f4', borderBottomWidth: 1, borderBottomColor: '#ebebeb', paddingVertical: 10 },
-  headerText: { fontWeight: '800', color: '#333', textTransform: 'uppercase', fontSize: 12, letterSpacing: 0.5 },
-  dataRow: { backgroundColor: 'white', paddingVertical: 10 },
-  cell: { paddingHorizontal: 4 },
-  colName: { flexBasis: '44%', flexGrow: 1, flexShrink: 1 },
-  colType: { flexBasis: '22%', flexGrow: 0, flexShrink: 1 },
-  colSide: { flexBasis: '16%', flexGrow: 0, flexShrink: 1 },
-  colBal: { flexBasis: '18%', flexGrow: 0, flexShrink: 1, textAlign: 'right' },
-  footer: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 18, alignItems: 'flex-end' },
-  totalText: { fontWeight: '800', fontSize: 16 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  empty: { textAlign: 'center', color: '#777', marginTop: 12 },
-});

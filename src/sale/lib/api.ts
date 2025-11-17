@@ -2,6 +2,15 @@
 import { API_BASE } from '@/src/config';
 import { loadAuth } from '@/src/auth/storage';
 
+async function authHeaders() {
+  const auth = await loadAuth();           // { token, user, shop, ... } or null
+  const token = auth?.token;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
 import { useAuth } from '@/src/auth/AuthContext';
 
 function HeaderRight() {
@@ -11,14 +20,7 @@ function HeaderRight() {
 
 // Build headers using the latest token from storage
 
-async function authHeaders() {
-  const auth = await loadAuth();           // { token, user, shop, ... } or null
-  const token = auth?.token;
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
+
 
 
 export type Store = { id: string; name: string };

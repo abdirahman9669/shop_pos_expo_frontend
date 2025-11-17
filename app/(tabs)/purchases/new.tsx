@@ -16,7 +16,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { API_BASE, TOKEN } from '@/src/config';
+import { loadAuth } from '@/src/auth/storage';
 
+async function authHeaders() {
+  const auth = await loadAuth();           // { token, user, shop, ... } or null
+  const token = auth?.token;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}), 
+  };
+}
 /* ===========================
  *  API ENDPOINTS / AUTH
  * =========================== */
@@ -27,7 +36,7 @@ const URLS = {
   stores: `${API_BASE}/api/stores`,
   purchases: `${API_BASE}/api/purchases`,
 };
-const authHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
+
 
 /* ===============
  *  TYPES
@@ -187,12 +196,12 @@ export default function PurchaseNew() {
 
   /* -------- Fetchers -------- */
   const fetchSuppliers = useCallback(async (): Promise<Supplier[]> => {
-    const r = await fetch(URLS.suppliers, { headers: authHeaders });
+    const r = await fetch(URLS.suppliers, { headers: await authHeaders() });
     const j = await r.json();
     return (j?.data ?? j ?? []);
   }, []);
   const fetchStores = useCallback(async (): Promise<Store[]> => {
-    const r = await fetch(URLS.stores, { headers: authHeaders });
+    const r = await fetch(URLS.stores, { headers: await authHeaders() });
     const j = await r.json();
     return (j?.data ?? j ?? []);
   }, []);
@@ -221,7 +230,7 @@ export default function PurchaseNew() {
       setSearching(true);
       try {
         const qs = new URLSearchParams({ q: query.trim(), limit: '25' });
-        const r = await fetch(`${URLS.products}?${qs.toString()}`, { headers: authHeaders });
+        const r = await fetch(`${URLS.products}?${qs.toString()}`, { headers: await authHeaders() });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const j = await r.json();
         setResults(Array.isArray(j) ? j : j?.data ?? []);
@@ -278,7 +287,7 @@ export default function PurchaseNew() {
     lastHandledByCodeRef.current.set(code, now);
 
     try {
-      const r = await fetch(`${URLS.byBar}?barcode=${encodeURIComponent(code)}`, { headers: authHeaders });
+      const r = await fetch(`${URLS.byBar}?barcode=${encodeURIComponent(code)}`, { headers: await authHeaders() });
       if (!r.ok) {
         if (r.status === 404) {
           Alert.alert('Not found', `No product for barcode ${code}`);
@@ -377,7 +386,7 @@ export default function PurchaseNew() {
         pay: { method: payMethod, amount_usd: n(amountPaidUsd, 0) },
       };
 
-      const r = await fetch(URLS.purchases, { method: 'POST', headers: authHeaders, body: JSON.stringify(body) });
+      const r = await fetch(URLS.purchases, { method: 'POST', headers: await authHeaders(), body: JSON.stringify(body) });
       const raw = await r.text();
       let j: any = null;
       try { j = raw ? JSON.parse(raw) : null; } catch {}

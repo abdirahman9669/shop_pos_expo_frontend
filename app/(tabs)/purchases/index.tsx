@@ -15,9 +15,17 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { API_BASE, TOKEN } from '@/src/config';
+import { loadAuth } from '@/src/auth/storage';
 
-/** ---- TEMP auth (same style as other pages) ---- */
-const AUTH = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
+async function authHeaders() {
+  const auth = await loadAuth();           // { token, user, shop, ... } or null
+  const token = auth?.token;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}), 
+  };
+}
+
 
 /** ---- Types ---- */
 type PurchaseRow = {
@@ -73,7 +81,7 @@ export default function PurchasesIndex() {
     if (loading) return;
     setLoading(true);
     try {
-      const r = await fetch(`${API_BASE}/api/purchases?${qs}`, { headers: AUTH });
+      const r = await fetch(`${API_BASE}/api/purchases?${qs}`, { headers: await authHeaders() });
       const j = await r.json();
 
       // Expect shape: { ok, data, total, ... }

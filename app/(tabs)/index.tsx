@@ -166,7 +166,14 @@ export default function HomeScreen() {
   return (
     <>
       <Stack.Screen options={screenOptions} />
-
+      <Stack
+        initialRouteName="(tabs)"
+        screenOptions={{
+          headerShown: false,
+          gestureEnabled: true,
+          fullScreenGestureEnabled: true,
+        }}
+      />
       {/* The shell already adds padding & background; keep content lean here */}
       <ScrollView
         refreshControl={
@@ -179,6 +186,7 @@ export default function HomeScreen() {
             progressViewOffset={56}
           />
         }
+        style={{paddingTop: space.sm }}
         contentContainerStyle={{ gap: space.lg, paddingBottom: space.lg }}
         keyboardShouldPersistTaps="handled"
       >
@@ -194,7 +202,7 @@ export default function HomeScreen() {
             >
               <Ionicons name="sparkles-outline" size={20} color={t.colors.primary.onBase as string} />
             </View>
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1,  }}>
               <Text style={text('h3', t.colors.textPrimary)}>{greeting}, {userName}</Text>
               {!!userRole && (
                 <Text style={text('caption', t.colors.textSecondary)}>
@@ -254,7 +262,7 @@ export default function HomeScreen() {
                   <Ionicons name="people-outline" size={22} color="#0EA5E9" />
                 </View>
               }
-              onPress={() => router.push('/')}
+              onPress={() => router.push('/customers/All')}
             />
 
             <ActionTile

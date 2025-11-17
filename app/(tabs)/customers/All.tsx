@@ -10,7 +10,19 @@ import { useTheme, text, space, layout, radius } from '@/src/theme';
 import { Card, Button, Divider, ListItem, Tag, SegmentedControl } from '@/src/components';
 import NewCustomerModal from '../customers/NewCustomerModal';
 
-const AUTH = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
+import { loadAuth } from '@/src/auth/storage';
+
+async function authHeaders() {
+const auth = await loadAuth()
+const token = auth?.token;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+  
+}
+
+
 
 type Row = {
   customer_id: string;
@@ -53,7 +65,7 @@ export default function CustomersReceivablesScreen() {
     try {
       const qs = new URLSearchParams(withAging ? { with_aging: '1' } : {}).toString();
       const url = `${API_BASE}/api/customers/allWithBalance${qs ? `?${qs}` : ''}`;
-      const r = await fetch(url, { headers: AUTH });
+      const r = await fetch(url, { headers: await authHeaders() });
       const j: ApiResp = await r.json();
       if (!r.ok || !j?.ok) throw new Error((j as any)?.error || `HTTP ${r.status}`);
       setRows(j.rows || []);

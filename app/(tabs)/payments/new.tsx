@@ -8,9 +8,19 @@ import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView } from 'react-native';
 import { API_BASE, TOKEN } from '@/src/config';
+import { loadAuth } from '@/src/auth/storage';
+
+async function authHeaders() {
+  const auth = await loadAuth();           // { token, user, shop, ... } or null
+  const token = auth?.token;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
 /** ====== TEMP AUTH (move later) ====== */
-const AUTH = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
+
 
 /** ====== Types ====== */
 type Direction = 'IN' | 'OUT';
@@ -61,7 +71,7 @@ export default function NewPaymentScreen() {
   /** ---- Backend fetchers ---- */
   const loadCurrencies = useCallback(async () => {
     try {
-      const r = await fetch(`${API_BASE}/api/currencies`, { headers: AUTH });
+      const r = await fetch(`${API_BASE}/api/currencies`, { headers: await authHeaders() });
       const j = await r.json();
       const arr: any[] = j?.currencies ?? j ?? [{ code: 'USD' }, { code: 'SOS' }];
       const mapped = arr.map((c) => ({ id: c.code, code: c.code }));
@@ -75,7 +85,7 @@ export default function NewPaymentScreen() {
 
   const loadMethodsFromAccounts = useCallback(async () => {
     try {
-      const r = await fetch(`${API_BASE}/api/accounts?limit=200`, { headers: AUTH });
+      const r = await fetch(`${API_BASE}/api/accounts?limit=200`, { headers: await authHeaders() });
       const j = await r.json();
       const list: Account[] = (j?.data ?? j ?? []) as Account[];
       // Strategy: anything named CASH_*, WALLET_*, BANK_* or AccountType CASH_ON_HAND
@@ -96,7 +106,7 @@ export default function NewPaymentScreen() {
   }, []);
 
   const fetchCustomersAllWithBalance = useCallback(async (): Promise<CustomerParty[]> => {
-    const r = await fetch(`${API_BASE}/api/customers/allWithBalance?limit=1000`, { headers: AUTH });
+    const r = await fetch(`${API_BASE}/api/customers/allWithBalance?limit=1000`, { headers: await authHeaders() });
     const j = await r.json();
     const rows: any[] = j?.rows || j?.data || j || [];
     return rows.map((x) => ({
@@ -110,7 +120,7 @@ export default function NewPaymentScreen() {
 
   const fetchSuppliers = useCallback(async (q: string): Promise<SupplierParty[]> => {
     const qs = new URLSearchParams({ q, limit: '8', order: 'name', dir: 'ASC' }).toString();
-    const r = await fetch(`${API_BASE}/api/suppliers?${qs}`, { headers: AUTH });
+    const r = await fetch(`${API_BASE}/api/suppliers?${qs}`, { headers: await authHeaders() });
     const j = await r.json();
     const rows: any[] = j?.data || j?.rows || j || [];
     return rows.map((x) => ({
@@ -178,10 +188,10 @@ export default function NewPaymentScreen() {
     else body.supplier_id = selected.id;
 
     try {
-      const r = await fetch(`${API_BASE}/api/payments`, { method: 'POST', headers: AUTH, body: JSON.stringify(body) });
+      const r = await fetch(`${API_BASE}/api/payments`, { method: 'POST', headers: await authHeaders(), body: JSON.stringify(body) });
       const j: CreateResp = await r.json();
       if (!r.ok || !j?.ok || !j?.payment?.id) throw new Error(j?.error || `HTTP ${r.status}`);
-      router.push({ pathname: '/payment/[id]' as const, params: { id: j.payment.id } });
+      router.push({ pathname: '/payments/[id]' as const, params: { id: j.payment.id } });
     } catch (e: any) {
       alert(e?.message || 'Failed to create payment');
     }

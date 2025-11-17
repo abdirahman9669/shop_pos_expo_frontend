@@ -10,6 +10,7 @@ import { ThemeProvider as AppThemeProvider } from '@/src/theme/provider';
 import { AuthProvider } from '@/src/auth/AuthContext';
 import { PageActionsProvider } from '@/src/ux/PageActionsProvider';
 import { ToastProvider } from '@/src/components/Toast';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -35,9 +36,16 @@ export default function RootLayout() {
       <ToastProvider>
         <PageActionsProvider>
           <AuthProvider>
+            <GestureHandlerRootView style={{flex: 1}}>
             {/* Everything goes through the (shell) group now */}
-            <Stack initialRouteName="(tabs)" screenOptions={{ headerShown: false }} />
-            <StatusBar style={appTheme.mode === 'dark' ? 'light' : 'dark'} />
+            <Stack 
+            initialRouteName="(tabs)" screenOptions={{ headerShown: false }} 
+            
+            />
+            <StatusBar style={appTheme.mode === 'dark' ? 'light' : 'dark'} 
+            
+            />
+            </GestureHandlerRootView>
           </AuthProvider>
         </PageActionsProvider>
       </ToastProvider>

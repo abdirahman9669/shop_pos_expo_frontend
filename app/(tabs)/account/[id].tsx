@@ -1,14 +1,23 @@
 // app/account/[id].tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  SafeAreaView, View, Text, StyleSheet, TextInput,
+import { View, Text, StyleSheet, TextInput,
   TouchableOpacity, ActivityIndicator, FlatList, Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { API_BASE, TOKEN } from '@/src/config';
+import { loadAuth } from '@/src/auth/storage';
 
-/* ===== TEMP AUTH ===== */
-const authHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
+async function authHeaders() {
+  const auth = await loadAuth();
+  const token = auth?.token;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+
 
 /* ===== Types ===== */
 type CustomerContrib = { customer_id: string; name: string; balance_usd?: number; last_activity?: string | null };
@@ -110,7 +119,7 @@ export default function AccountContributorsScreen() {
     try {
       const url = `${API_BASE}/api/accounts/${id}/contributors?${buildQuery()}`;
       console.log('[contributors GET]', url);
-      const r = await fetch(url, { headers: authHeaders, signal: ac.signal, cache: 'no-store' as any });
+      const r = await fetch(url, { headers: await authHeaders(), signal: ac.signal, cache: 'no-store' as any });
       const j: ApiResp = await r.json();
       if (!r.ok || !j?.ok) throw new Error((j as any)?.error || `HTTP ${r.status}`);
 

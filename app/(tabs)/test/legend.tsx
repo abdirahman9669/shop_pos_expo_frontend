@@ -127,6 +127,57 @@ export default function HomeScreen() {
         </Link>
       </ThemedView>
 
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/purchases" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ purchase 
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/customers/new" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ new customer 
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+
+
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/account-type" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ account-type
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/users" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ users
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
+
+
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/account-type" asChild>
+          <TouchableOpacity style={{ backgroundColor: 'black', padding: 12, borderRadius: 12 }}>
+            <ThemedText style={{ color: 'white', fontWeight: '800', textAlign: 'center' }}>
+              ➕ account-type
+            </ThemedText>
+          </TouchableOpacity>
+        </Link>
+      </ThemedView>
 
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 1: Try it</ThemedText>

@@ -13,10 +13,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { API_BASE, TOKEN } from '@/src/config';
+import { loadAuth } from '@/src/auth/storage';
 
+async function authHeaders() {
+  const auth = await loadAuth();
+  const token = auth?.token;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 /** ====== TEMP AUTH (move to secure storage later) ====== */
 
-const AUTH = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
+
 
 /** ====== Types ====== */
 type Payment = {
@@ -81,7 +90,7 @@ export default function PaymentsIndex() {
         limit: '100',
       }).toString();
 
-      const r = await fetch(`${API_BASE}/api/payments?${qs}`, { headers: AUTH });
+      const r = await fetch(`${API_BASE}/api/payments?${qs}`, { headers: await authHeaders() });
       const j = await r.json();
       if (!r.ok || !j?.ok) throw new Error(j?.error || `HTTP ${r.status}`);
       setRows(j.data || []);
@@ -102,10 +111,10 @@ export default function PaymentsIndex() {
 
   /** —— Type-safe navigators (no generic "go") —— */
   const openPayment = (id: string) =>
-    router.push({ pathname: '/payment/[id]' as const, params: { id } });
+    router.push({ pathname: '/payments/[id]' as const, params: { id } });
 
   const openCustomer = (id: string) =>
-    router.push({ pathname: '/customer/[id]' as const, params: { id } });
+    router.push({ pathname: '/customers/[id]' as const, params: { id } });
 /*
   const openSupplier = (id: string) =>
     router.push({ pathname: '/supplier/[id]' as const, params: { id } });

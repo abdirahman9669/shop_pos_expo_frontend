@@ -12,11 +12,21 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { API_BASE, TOKEN } from '@/src/config';
+import { loadAuth } from '@/src/auth/storage';
+
+async function authHeaders() {
+  const auth = await loadAuth();
+  const token = auth?.token;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
 /** ====== AUTH (dev only: put token in secure storage later) ====== */
 
 const URL = `${API_BASE}/api/account-types/with-balances`;
-const authHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
+
 
 /** ====== Types ====== */
 type Row = {
@@ -61,7 +71,7 @@ export default function AccountTypesScreen() {
     setLoading(true);
     try {
       const qs = new URLSearchParams({ from, to }).toString();
-      const r = await fetch(`${URL}?${qs}`, { headers: authHeaders });
+      const r = await fetch(`${URL}?${qs}`, { headers: await authHeaders() });
       const j: ApiResp = await r.json();
       if (!r.ok || !j?.ok) throw new Error(j as any);
       setRows(j.data || []);

@@ -12,9 +12,19 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_BASE, TOKEN } from '@/src/config';
+import { loadAuth } from '@/src/auth/storage';
+
+async function authHeaders() {
+  const auth = await loadAuth();           // { token, user, shop, ... } or null
+  const token = auth?.token;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}), 
+  };
+}
 
 /** ===== TEMP AUTH (move to secure storage later) ===== */
-const AUTH = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
+
 
 /** ===== Types (matches your /api/purchases/:id) ===== */
 type Line = {
@@ -87,7 +97,7 @@ export default function PurchaseDetailScreen() {
     if (!id) return;
     setErr(''); setLoading(true);
     try {
-      const r = await fetch(`${API_BASE}/api/purchases/${id}`, { headers: AUTH });
+      const r = await fetch(`${API_BASE}/api/purchases/${id}`, { headers: await authHeaders() });
       const j = await r.json();
       if (!r.ok || !j?.ok) throw new Error(j?.error || `HTTP ${r.status}`);
       setData(j);
@@ -115,7 +125,7 @@ export default function PurchaseDetailScreen() {
           try {
             const r = await fetch(`${API_BASE}/api/purchases/${id}/void`, {
               method: 'POST',
-              headers: AUTH,
+              headers: await authHeaders(),
             });
             const j = await r.json();
             if (!r.ok || !j?.ok) throw new Error(j?.error || `HTTP ${r.status}`);

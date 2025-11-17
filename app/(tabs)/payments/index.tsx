@@ -8,9 +8,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { API_BASE, TOKEN } from '@/src/config';
 
+import { loadAuth } from '@/src/auth/storage';
+
+async function authHeaders() {
+  const auth = await loadAuth();           // { token, user, shop, ... } or null
+  const token = auth?.token;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}), 
+  };
+}
+
 // TEMP auth; move to secure storage
 
-const AUTH = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
+
 
 type Payment = {
   id: string;
@@ -70,7 +81,7 @@ export default function PaymentsScreen() {
       if (maxUsd.trim()) params.max_usd = maxUsd.trim();
 
       const url = `${API_BASE}/api/payments?${new URLSearchParams(params).toString()}`;
-      const r = await fetch(url, { headers: AUTH });
+      const r = await fetch(url, { headers: await authHeaders() });
       const j: ListResp = await r.json();
       if (!r.ok || !j?.ok) throw new Error((j as any)?.error || `HTTP ${r.status}`);
       setRows(j.data || []);
@@ -186,7 +197,7 @@ export default function PaymentsScreen() {
           renderItem={({ item }) => (
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => router.push({ pathname: '/payment/[id]', params: { id: item.id } })}
+              onPress={() => router.push({ pathname: '/payments/[id]', params: { id: item.id } })}
             >
               <View style={[s.row, s.dataRow]}>
                 <View style={[s.cell, s.cWhen]}>

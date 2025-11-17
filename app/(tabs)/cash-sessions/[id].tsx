@@ -3,7 +3,16 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { SafeAreaView, View, Text, StyleSheet, ActivityIndicator, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { API_BASE, TOKEN } from '@/src/config';
+import { loadAuth } from '@/src/auth/storage';
 
+async function authHeaders() {
+  const auth = await loadAuth();         // { token, user, shop, ... } or null      
+  const token = auth?.token;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 const AUTH = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
 
 type Session = {
@@ -42,7 +51,7 @@ export default function CashSessionDetail() {
     setLoading(true);
     try {
       // Your backend lacks GET /:id; fetch and find locally
-      const r = await fetch(`${API_BASE}/api/cash-sessions`, { headers: AUTH });
+      const r = await fetch(`${API_BASE}/api/cash-sessions`, { headers: await authHeaders() });
       const j = await r.json();
       const arr: Session[] = Array.isArray(j) ? j : (j?.data ?? j ?? []);
       const found = arr.find((s) => s.id === id);
@@ -73,7 +82,7 @@ export default function CashSessionDetail() {
       };
       const r = await fetch(`${API_BASE}/api/cash-sessions/${id}/close`, {
         method: 'PATCH',
-        headers: AUTH,
+        headers: await authHeaders(),
         body: JSON.stringify(body),
       });
       const j = await r.json();
